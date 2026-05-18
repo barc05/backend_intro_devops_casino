@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH to AWS EC2 and Deploy
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_PUBLIC_IP }}
           username: ec2-user
@@ -46,4 +46,7 @@ jobs:
             
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
                 
-            docker run -d --name casino_backend -p 3000:3000 ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
+            docker run -d --name casino_backend \
+              -p 3000:3000 \
+              -e DATABASE_URL="postgresql://postgres:vidal_casino_secret@10.0.138.125:5432/vidal_casino?schema=public" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
