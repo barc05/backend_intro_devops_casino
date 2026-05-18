@@ -40,13 +40,10 @@ jobs:
           username: ec2-user
           key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            
-            docker stop casino_backend || true
-            docker rm casino_backend || true
-            
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
-                
-            docker run -d --name casino_backend \
-              -p 3000:3000 \
-              -e DATABASE_URL="postgresql://postgres:vidal_casino_secret@10.0.138.125:5432/vidal_casino?schema=public" \
-              ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
+
+            ssh -o StrictHostKeyChecking=no ec2-user@10.0.138.125 "
+              docker stop casino_backend || true && \
+              docker rm casino_backend || true && \
+              docker pull ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest && \
+              docker run -d --name casino_backend -p 3000:3000 -e DATABASE_URL='postgresql://postgres:vidal_casino_secret@10.0.138.125:5432/vidal_casino?schema=public' ${{ secrets.DOCKERHUB_USERNAME }}/casino-backend:latest
+            "
