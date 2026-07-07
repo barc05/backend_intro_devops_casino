@@ -16,8 +16,7 @@ spec:
     spec:
       containers:
       - name: casino-backend
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/casino-backend:latest
-        imagePullPolicy: Always
+        image: IMAGEN_MUTABLE
         ports:
         - containerPort: 3000
         envFrom:
