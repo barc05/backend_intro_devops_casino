@@ -19,22 +19,26 @@ spec:
         image: 605493908341.dkr.ecr.us-east-1.amazonaws.com/casino-backend:latest
         ports:
         - containerPort: 3000
+
+        envFrom:
+        - secretRef:
+            name: casino-secrets
+
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 3000
+          initialDelaySeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 3000
+          initialDelaySeconds: 5
+          
         resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
           limits:
-            cpu: "200m"
-            memory: "256Mi"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: casino-backend
-spec:
-  type: ClusterIP
-  selector:
-    app: casino-backend
-  ports:
-  - port: 3000
-    targetPort: 3000
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
