@@ -16,12 +16,9 @@ spec:
     spec:
       containers:
       - name: casino-backend
-        image: IMAGEN_MUTABLE
+        image: 605493908341.dkr.ecr.us-east-1.amazonaws.com/casino-backend:latest
         ports:
         - containerPort: 3000
-        envFrom:
-        - secretRef:
-            name: casino-secrets
         resources:
           requests:
             cpu: "100m"
