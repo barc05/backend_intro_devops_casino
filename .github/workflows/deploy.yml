@@ -1,55 +1,59 @@
-name: CI/CD Pipeline - Backend Casino
+name: CI/CD Backend VidalCasino
 
 on:
   push:
-    branches:
-      - deploy
+    branches: [ deploy ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 605493908341.dkr.ecr.us-east-1.amazonaws.com
+  IMAGE_NAME: casino-backend
 
 jobs:
-  build-and-deploy:
+  test:
+    name: Pruebas Unitarias
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v3
-
-    - name: Configure AWS Credentials (AWS Academy)
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-        aws-region: ${{ secrets.AWS_REGION }}
-
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-
-    - name: Build, Tag and Push Image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: casino-backend
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        VERSION_TAG="v1.0.0"
-        REPO_NAME="casino-backend"
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
         
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
-                     -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-                     -t $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG .
-        
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION_TAG
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Instalar dependencias y Testear
+        run: |
+          npm ci
+          npm test
 
-    - name: Update Kubeconfig for EKS
-      run: |
-        aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+  deploy:
+    name: Build, Push y Deploy a EKS
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
 
-    - name: Deploy Manifests to EKS Cluster
-      run: |
-        sed -i "s|IMAGEN_MUTABLE|$ECR_REGISTRY/$REPO_NAME:${{ github.sha }}|g" deployment.yaml
-        
-        kubectl apply -f deployment.yaml
-        
-        kubectl rollout restart deployment/casino-backend
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag y push a ECR
+        run: |
+          docker build -t $ECR_REGISTRY/$IMAGE_NAME:latest .
+          docker push $ECR_REGISTRY/$IMAGE_NAME:latest
+
+      - name: Deploy a EKS
+        run: |
+          aws eks update-kubeconfig --name vidalcasino-cluster --region $AWS_REGION
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout restart deployment/$IMAGE_NAME
