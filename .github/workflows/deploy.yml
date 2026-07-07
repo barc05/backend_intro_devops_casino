@@ -25,7 +25,7 @@ jobs:
           
       - name: Instalar dependencias y Testear
         run: |
-          npm ci
+          npm install
           npm test
 
   deploy:
